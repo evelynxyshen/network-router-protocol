@@ -1,0 +1,35 @@
+CS144 Lab4
+
+Name: Xiaoying Shen (SUNetID: xyshen@stanford.edu)
+
+Global variables: the routing table link list (route_t *routing_table); the number of entries in the routing table (rt_size); the record of the time for last advert (struct timeval last_advert_time), which is used for the timer; the record of the interface (intf_info) and the number of interfaces (intf_info_count);
+
+In the initialization function, first, the routing table is initializaed with the interfaces. The entries for the interfaces are different from other entries: 1. they have a last_updated time is -1, so there is no way for them to timeout; 2. they won't be deleted from the routing table even if their cost is infinity (interface down); 3. Their next_hop_ip is 0x00000000. All the interface information is recorded into intf_info. Then, initialize the "last_advert_time" with function gettimeofday and send out the first broadcast.
+
+When receive a packet, the function safe_dr_handle_packet is used to handle the received packet. First unfold the packet; entry_num is calculated number of entries in received packet. Go through each entry, check with the routing table. If the entry is totally new, add the new entry into the routing table. If the entry is not new, need to compare the cost of new and old entry. The new cost is "cost of interface between the sender and the receiver" + "cost from the sender to the destination. The old cost can be found in the routing table. Compare the new and old cost; setup the routing table with the smaller cost route. One exception is, if the entry in the routing table was got from the same sender before, then no matter if the cost is higher or lower, the new route is recorded.
+
+Note that when the interface is not enabled, no packet should be received or sent out through the interface. Check is needed in both safe_dr_handle_packet, safe_periodic
+
+Periodically, the router need to check the condition of the routing table and broadcast the routing table to its neighbors. This is done by "safe_dr_handle_periodic". The function first checks the timeout with function "dr_check_timeout". The check timeout function also help clean up the is_garbage entries in the routing table and the entries with INFINITY cost (which means the connection is cut). It needs to note that the entries for interface links do not check timeout since they shouldn't be deleted from routing table. When finding an entry which is timeout, the routing table need to mark the entry's cost as INFINITY and advertize the change before delete the entry.
+
+After check timeout and clean up the table, the periodic function broadcast the routing table every 10 sec. The advertisement is done by function "dr_send_advert()". dr_send_advert packs routing table into the "entries" and send to the neighbors of the router.
+
+Function dr_get_next_hop returns the interface and next_hop_ip according to the destination ip. Go through the routing table; use the mask of each entry to mask the destination ip. Then compare it with the subnet of each entry, find the maximum prefix match. Then return the interface and next_hop_ip information from that entry. If there is no matching found, return 0xFFFFFFFF.
+
+safe_dr_interface_change is used to deal with the change in router interface. The change in routing table can be divided into two parts. (1)For the links of the changed interface, Set the new cost if the interface is up or changing cost. Set the cost to INFINITY if the interface is down. (2)For the routes go through the changed link, modify the cost is interface cost is changed, set the cost to INFINITY if the interface is down and set the entry to is_garbage if the interface is up (since all the cost information is not valid, need to reset the routing table).
+
+
+There are some internal tool functions for a better code reuse:
+dr_setup_entry - setup a new routing table entry. The memory of the new entry is mallocated by the caller of this function and then set all the parameters of this entry according to the input. 
+dr_search_subnet - find the entry to the input subnet ip / ip
+dr_add_entry - add an entry into the routing table
+dr_replace_entry - replace an entry with the new entry, this is used to update the routing table
+dr_del_entry - delete entry route to the input subnet
+dr_ck_del_entry - add a check before delete to make sure that the interface link won't be deleted from the routing table.
+After delete and replace, the routing table will send advert. Since add is used in replace function, the send_advert for add is called outside of add function to avoid multiple advert in replace function.
+rip_setup_entry is used to setup the entries to send out
+
+
+
+
+

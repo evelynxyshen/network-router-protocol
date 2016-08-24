@@ -1,0 +1,18 @@
+sr_arpcache.c:      mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],
+sr_arpcache.h:           if req->times_sent >= 5:
+sr_arpcache.h:   until we send 5 ARP requests, then we send ICMP host unreachable back to
+sr_arpcache.h:#define SR_ARPCACHE_TO    15.0
+sr_arpcache.h:   a destructor, and a cleanup thread times out cache entries every 15
+Binary file sr_arpcache.o matches
+sr_main.c:#define DEFAULT_PORT 3250
+Binary file sr_main.o matches
+sr_protocol.h:#define IP_MAXPACKET 65535
+sr_router.c: * date:  Mon Feb 18 12:50:42 PST 2002
+sr_router.c:    if (arp_req->times_sent >= 5){
+sr_router.c~: * date:  Mon Feb 18 12:50:42 PST 2002
+sr_router.h:  do { int ivyl; for(ivyl=0; ivyl<5; ivyl++) printf("%02x:", \
+sr_router.h:  (unsigned char)(x[ivyl])); printf("%02x",(unsigned char)(x[5])); } while (0)
+sr_router.h:#define INIT_TTL 255
+sr_router_icmp.c: * date:  Mon Feb 18 12:50:42 PST 2002
+sr_router_icmp_modi.c: * date:  Mon Feb 18 12:50:42 PST 2002
+Binary file sr_router.o matches

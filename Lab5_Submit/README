@@ -1,0 +1,57 @@
+CS144 Lab5
+
+Name: Xiaoying Shen (SUNetID: xyshen@stanford.edu)
+
+*************    NOTE    **************
+Since there is problem with my auth_key, it was replaced.
+To run the program, please use 'xy' as username instead of 'xyshen'
+The old auth_key also included in this folder, named auth_key_oldxy
+***************************************
+
+
+*** NAT data structure ***
+Each router has a NAT structure. NAT structure has a mapping list records all the mapping entries, a 'aux_ext_valid' records the available 'aux_ext', a 'unso_syn_list' records the pending unsolicited syn, and icmp_to/tcp_estab_to/tcp_transit_to records all the timeout information. The mapping entry stores information about mapping type, ip_int, ip_ext, aux_int, aux_ext, last_updated, and a connection list. The connection list records ip_int, ip_ext for the connection lookup and a state for the current state of connection (building or established).
+
+struct sr_nat_connection 
+struct sr_nat_mapping 
+struct sr_nat_unsosyn
+struct sr_nat
+
+Whenever the aux_ext is assigned to a mapping, the valid value increases by one. When the upper limit is reached, wrap the valid number around back to 1024. To avoid 'port overloading', the 'valid' port number is compared with current used port numbers and if any is the same as the 'valid', increase the 'valid' by 1.
+
+*** pass the flags ***
+Flag -n controls whether the NAT is enabled. If the -n flag is not passed, then the router acts following the requirements of lab 3. Whether NAT is enabled is recorded by a nat_enabled in router structure sr.
+
+Similarly, the timeout value passed through flag -I -E and -R are recorded in nat structure.
+
+*** Functions Revised and Add NAT Functions ***
+The function sr_handlepacket_icmpEcho is revised for nat function. If the icmp packet is received from eth0, which is from internal node, send icmp reply directly. If the icmp packet is from external and the mapping is found in nat. Translate the packet and forward it to internal nodes. If the packet is from external but cannot find the mapping in nat, reply with icmp unreachable. If NAT is not enabled, reply the icmp directly as in Lab3.
+
+The NAT function is added into the sr_handlepacket_forwarding function. If nat is enabled, the forwarding function needs to translate the src ip address and recalculate the ip cksum. If the packet is tcp packet, it need to recaluclate the tcp cksum, since the tcp cksum involves the ip header. Then the function lookup the next hop ip address, find the interface and send the packet as in Lab3.
+
+*** sr_handlepacket ***
+When receive a packet, first check if the packet targets router. If the packet does not target router, forward it. When NAT is enabled, handle tcp and icmp with sr_handle_forwardicmp_nat and sr_handle_forwardtcp_nat. If the packet targets router, it might target the internal node. sr_handlepacket_icmpEcho is revised accordingly and sr_handlepacket_tcp is added for tcp.
+
+*** sr_nat_timeout ***
+The function handles icmp timeout, tcp timeout and the 6 second requirement for the unsolicited SYN from external nodes.
+
+For the icmp timeout and tcp timeout, go through the mapping lists and diff the time when the mapping was added into the list and current time. If a mapping entry is timeout, remove the mapping. For the tcp mapping type, need to go through each connection to check timeout. If a connection is timeout, remove the connection. 
+
+The timeout helps clean up defunct mappings between internal addresses and the external address.
+
+*** TCP: cksum ***
+The tcp packets' cksum need to be calculated with a psuedo header composed of ip address and ip protocol. But this pseudo packet is not included into the tcp packet sent out. Tool function cksum_tcp is used to calculate the cksum for tcp packets.
+
+*** TCP: Received Packet ***
+sr_handlepacket_tcp is used to deal with tcp targets to the router's ip address, which is usually from external nodes. Check if the packet has a corresponding mapping. If there is no mapping and the packet is a SYN, it is an unsolicited SYN. Then lookup if the connection exists. If there is no corresponding connection exists, send icmp unreachable for packets other than SYN. Insert new connection and forward SYN packets. If there is corresponding connection exists, translate the packet and forward it to internal nodes with sr_handle_forwarding.
+
+*** TCP: unsolicited SYN ***
+If an unsolicited SYN packet is received from external nodes, add the packet and related information into the unso_syn_list in nat. When check timeout, also check the unsolicited SYN list. If 6 seconds has passed after one SYN is received, delete the unsolicited SYN from list and send icmp unreachable to reply the packet. If the unsolicited SYN can be found in the NAT mapping and connection list, it means during the waiting time, there is connection initiated from the internal nodes, then drop the packet, delete the SYN from unso_syn_list.
+
+This also handles the simultaneous-open mode of the connections.
+
+*** TCP: endpoint-independent mapping ***
+Once an internal node initiate a mapping to external port, the internal node is visible to external nodes. This means SYN initiated from external nodes to a port mapping to the target internal node is not an unsolicited SYN. This SYN can be translated and send to internal node.
+
+*** TCP: forward packet ***
+If ther packet is a SYN sending from internal to external, insert the mapping and the connection, translate the packet and send it out. If the packet is not a SYN, either no mapping or no connection will lead to a icmp unreachable reply. If it is an ACK, change the connection state into established.

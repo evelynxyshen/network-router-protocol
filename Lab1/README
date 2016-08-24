@@ -1,0 +1,22 @@
+CS144 Lab1
+
+Name: Xiaoying Shen (SUNetID: xyshen)
+
+reliable_state remember the states including: the seqno and ackno of current connection; Whether the terminal is waiting for an ack for a sent packet; whether read an EOF; what is the data sent but ack hasn't been received (record of data in buffer for retransmission); what is data pending for output (record of data in buffer for output);
+
+packet_retrans is the function for packet retransmission, which is called when timeout detected.
+
+check_destroy checks four conditions when the connection should be reallocate.  Whenever one of these conditions changed, check_destroy is called to see if it satisfies the condition to reallocate the connection. These four conditions are noted with 'eof_acked', 'eof_recved','all_acked','all_output' in reliable_state.
+
+rel_recvpkt check if the received packet is a data packet or a ack packet. If it is a data packet, check if the packet is correct through cksum. If the seqno is the number the terminal is currently waiting for, output the packet and send the ack. If the seqno is smaller than the number the terminal is waiting for, which indicates the earlier ack has lost, resend the ack packet. When output the received packet, check if the with the conn_bufspace to see if there is enough space, if yes, send the packet, else save the data in the output buffer into the state of connection.
+
+When send a packet, check if the content is EOF, nothing or data. When there is data, create the packet to send the data and put the state into wait_ack = 1. Also start to count the time with the timer.
+
+rel_output is called when there is extra space for output.  Check if the space is large enough to output all content in output buffer. If yes, output the content and check if all data has been written into conn_output.
+
+The rel_timer checks timeout and resend the packet through packet_retrans.
+
+
+
+
+

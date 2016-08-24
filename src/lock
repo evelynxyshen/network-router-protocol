@@ -1,0 +1,36 @@
+sr_arpcache.c:  pthread_mutex_lock(&(cache->lock));
+sr_arpcache.c:    if ((cache->entries[i].valid) && (cache->entries[i].ip == ip))
+sr_arpcache.c:      entry = &(cache->entries[i]);
+sr_arpcache.c:  pthread_mutex_unlock(&(cache->lock));
+sr_arpcache.c:  pthread_mutex_lock(&(cache->lock));
+sr_arpcache.c:  for (req = cache->requests; req != NULL; req = req->next) {
+sr_arpcache.c:    req->next = cache->requests;
+sr_arpcache.c:    cache->requests = req;
+sr_arpcache.c:  pthread_mutex_unlock(&(cache->lock));
+sr_arpcache.c:  for(req = cache->requests; req!=NULL; req = req->next){
+sr_arpcache.c:  pthread_mutex_lock(&(cache->lock));
+sr_arpcache.c:  for (req = cache->requests; req != NULL; req = req->next) {
+sr_arpcache.c:        cache->requests = next;
+sr_arpcache.c:    if (!(cache->entries[i].valid))
+sr_arpcache.c:    memcpy(cache->entries[i].mac, mac, 6);
+sr_arpcache.c:    cache->entries[i].ip = ip;
+sr_arpcache.c:    cache->entries[i].added = time(NULL);
+sr_arpcache.c:    cache->entries[i].valid = 1;
+sr_arpcache.c:  pthread_mutex_unlock(&(cache->lock));
+sr_arpcache.c:  pthread_mutex_lock(&(cache->lock));
+sr_arpcache.c:    for (req = cache->requests; req != NULL; req = req->next) {
+sr_arpcache.c:          cache->requests = next;
+sr_arpcache.c:  pthread_mutex_unlock(&(cache->lock));
+sr_arpcache.c:    struct sr_arpentry *cur = &(cache->entries[i]);
+sr_arpcache.c:  memset(cache->entries, 0, sizeof(cache->entries));
+sr_arpcache.c:  cache->requests = NULL;
+sr_arpcache.c:  pthread_mutexattr_init(&(cache->attr));
+sr_arpcache.c:  pthread_mutexattr_settype(&(cache->attr), PTHREAD_MUTEX_RECURSIVE);
+sr_arpcache.c:  int success = pthread_mutex_init(&(cache->lock), &(cache->attr));
+sr_arpcache.c:    return pthread_mutex_destroy(&(cache->lock)) &&
+sr_arpcache.c:           pthread_mutexattr_destroy(&(cache->attr));
+sr_arpcache.c:    pthread_mutex_lock(&(cache->lock));
+sr_arpcache.c:      if ((cache->entries[i].valid) &&
+sr_arpcache.c:          (difftime(curtime,cache->entries[i].added) > SR_ARPCACHE_TO)) {
+sr_arpcache.c:        cache->entries[i].valid = 0;
+sr_arpcache.c:    pthread_mutex_unlock(&(cache->lock));

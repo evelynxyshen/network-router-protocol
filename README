@@ -1,0 +1,46 @@
+CS144 Lab3
+
+Name: Xiaoying Shen (SUNetID: xyshen@stanford.edu)
+
+A simple router with a static routing table.
+The function of sr_handlepacket can be devided into several parts according to different types of packets received.
+> 1. handle ARP request
+When receive an ARP request with the ip for the router, return the ARP reply packet with the MAC of that interface. Here need to check the target ip is corresponding to the interface
+Function 'sr_handlepacket_arpreq' is used to handle arp request
+
+>2. handle ARP reply
+When receive the ARP reply. Check the arp cache to see if the request still in the queue. If the request still in the queue, send out all the packets related to that request with the MAC got from the reply. Note that the ip_ttl need to reduce by 1 here; If the request is no longer in the queue, no need to do anything. Besides sending the packet, also save the MAC and corresponding IP into the arp cache;
+Function 'sr_handlepacket_arpreply' is used to handle arp request 
+
+>3. handle icmp echo
+When receive an echo request to one of the router's interface. Here I use the function 'sr_ip_equal' to walk through every interfaces of the router and compare the ip with the packet destination ip to see if it is targeting the router. If the packet is an icmp echo request, send an icmp echo reply to the sending host;
+
+>4. handle icmp unreachable (type 3) and time exceeded (type 11)
+These two types of icmp have the same packet format: ethernet hdr + ip hdr + icmp hdr + 4B researved space + old ip hdr + 8B old ip payload
+When an IP packet containing a UDP or TCP payload, icmp unreachable packet is used to reply. Also when ttl field is 0 (for destination is router) and 1 (for forwarding), the time exceeded packet is used to reply
+
+Other than 3&4, ignore the packet
+
+>5. handle IP forwarding
+First check the packet minimum length and checksum to see if the packet is valid;
+
+Use the function 'rt_prefix_match' to find the entry with the longest prefix match with the destination IP address;
+	The 'rt_prefix_match' is devided into two steps: 1. use the mask address to AND with the destination address and ip of each entry in the routing table, compare to see if they are the same; 2. pick up the longest prefix match from all the prefix match;
+
+From the routing table entry, get the nexthop_ip and the nexthop_iface;
+
+Check the ARP cache for the nexthop_ip to get its MAC address. 
+	If the MAC address is in the cache, forward the packet using the interface MAC as the source and the destination MAC as the destination;
+	Need to reduce ip_ttl and recalculate the cksum;
+	If the MAC address is not in the cache, add an entry into the arpcache for the nexthop_ip with function 'sr_arpcache_queuereq'and send the arp request for the nexthop_ip;
+	In the 'sr_arpreq_handlereq' function, if the request is time exceeded, walk through the packet chain linked to the request and send a icmp host unreachable packet with 'sr_handlepacket_icmpUnreachable'; If the request is valid, send out the arp request with function 'sr_arpreq_sendreq' function.
+
+When sending the ARP request with 'sr_arpreq_sendreq', the source addr is the interface MAC, the destination addr is broadcast ff-ff-ff-ff-ff-ff;
+
+Here for the ip_ttl, two scenarios need to be considered:
+1. The destination is router. If the ip_ttl is 0, drop the packet and send an icmp time exceeded packet to reply;
+2. The destination is not the router. If the ip_ttl is equal or smaller than 1, drop the packet and send an icmp time exceeded packet to reply;
+
+For the ARP Cache, 
+The function sweep over the queue and handle the ARP reqest in the queue every second with the 'sr_arpreq_handlereq' function.
+The 'sr_arpreq_handlereq' funcion will check the life time of each arp request. If the request is time exceeded, walk through the packet chain linked to the request and send a icmp host unreachable packet with 'sr_handlepacket_icmpUnreachable'; If the request is valid, send out the arp request with function 'sr_arpreq_sendreq' function. This enable the ARP cache to invalidate the request after a timeout period
